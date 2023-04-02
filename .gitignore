@@ -1,0 +1,5 @@
+# Project exclude paths
+/cdc-oracle/target/
+/debezium-connector-oracle/target/
+logs/*
+/data/*
