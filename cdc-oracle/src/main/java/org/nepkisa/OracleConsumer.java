@@ -25,9 +25,9 @@ public class OracleConsumer {
         props.setProperty("database.server.name", "oracle130-0402-2");
         props.setProperty("connector.class", OracleConnector.class.getName());
         props.setProperty("offset.storage", FileOffsetBackingStore.class.getName());
-        // 指定 offset 存储目录
+        //指定 offset 存储目录
         props.setProperty("offset.storage.file.filename", "I:\\Code\\Java\\DebeziumCDC\\data\\oracle4.txt");
-        // 指定 Topic offset 写入磁盘的间隔时间
+        //指定 Topic offset 写入磁盘的间隔时间
         props.setProperty("offset.flush.interval.ms", "60000");
         props.setProperty("database.hostname", "192.168.10.130");
         props.setProperty("database.port", "1521");
@@ -36,16 +36,21 @@ public class OracleConsumer {
         props.setProperty("log.mining.batch.size.min","1000");
         props.setProperty("log.mining.batch.size.max","1000");
         props.setProperty("database.password", "123456");
-        props.setProperty("database.dbname", "nep");//要捕获的数据库名
-        props.setProperty("table.include.list", "neptune.userx");//要捕获的数据表
-        props.setProperty("snapshot.mode", "schema_only");//全量+增量
+        //要捕获的数据库名
+        props.setProperty("database.dbname", "nep");
+        //要捕获的数据表
+        props.setProperty("table.include.list", "neptune.userx");
+        //增量
+        props.setProperty("snapshot.mode", "schema_only");
         props.setProperty("database.history", FileDatabaseHistory.class.getCanonicalName());
         props.setProperty("database.history.file.filename", "I:\\Code\\Java\\DebeziumCDC\\data\\oracle5.txt");
         //是否输出 schema 信息
         props.setProperty("key.converter.schemas.enable", "false");
         props.setProperty("value.converter.schemas.enable", "false");
-        props.setProperty("database.serverTimezone", "UTC"); // 时区
-        props.setProperty("database.connection.adapter", "logminer"); // 模式
+        //时区
+        props.setProperty("database.serverTimezone", "UTC");
+        //模式
+        props.setProperty("database.connection.adapter", "logminer");
 
         // 2. 构建 DebeziumEngine
         // 使用 Json 格式

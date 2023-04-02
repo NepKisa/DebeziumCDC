@@ -1,7 +1,24 @@
 # Introduction
-This project is based on debezium-1.9.5.Final from https://github.com/debezium/debezium
+The project is based on debezium-1.9.5.Final from https://github.com/debezium/debezium
 
-# Run Code In IDE
+# Environment
+
+## Software
+
+| Software | Version     |
+| -------- | ----------- |
+| java     | 1.8.0_321   |
+| maven    | 3.8.5       |
+| oracle   | 19c         |
+| debezium | 1.9.5.Final |
+
+## jvm options
+
+```perl
+-ea -Xmx100m -Xms100m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=C:\Users\hakuou\Desktop\error2.log -Dlog4j.skipJansi=false
+```
+
+# Build In Your IDE
 First you need download oracle client from https://www.oracle.com/cn/database/technologies/instant-client/downloads.html
 
 If you don't want to download, then you can use the jar in directory lib
@@ -21,33 +38,31 @@ The depenedency in pom.xml like this
             <scope>provided</scope>
         </dependency>
 ```
-# Current Problem
-## A Long Transaction Cause OOM
-### 1. a long insert transaction with 30w rows, it will produce 1 start record + 30w insert records + 1 commit/rollback record
-> This can be known by analyzing the heap dump file
+# Issues
+### 1. A Long Transaction Cause OOM
+
+> These can be known by analyzing the heap dump file and read debezium-connector-oracle
 > 
-> * debezium will read records sequentially, 
-> 
-> * when read transaction type is start will execute handleStart() create cache,
-> 
-> * when read transaction type is commit will execute handleCommit() remove cache,
-> 
+> * debezium will read records sequentially
+> * a long insert transaction with 30w rows, it will produce 1 start record + 30w insert records + 1 commit/rollback record
+> * when read transaction type is start will execute handleStart() create cache
+> * when read transaction type is commit will execute handleCommit() remove cache
 > * when read transaction type is (insert、update、delete) , the parsed events(String) will add to  the list in this cache, oom will occured at this stage
 
 ### 2. lock all tables in capture list when snapshot stage 
 > Beacuse when create the connector’s LogMiner user execute the following SQL satement
 > ```sql
-> GRANT CREATE TABLE TO CDCUSER
+> GRANT LOCK ANY TABLE TO CDCUSER;
 > ```
 
 ### 3. the performance is lower than expected
 > method **emitChangeRecords()** in class **RelationalChangeRecordEmitter** execute tableSchema.valueFromColumnData() will reduce performance ? (other's publish)
 
-### 4. debezium1.9.3+ fixed the bug oracle server logminer session occupies memory and does not release(this problem is not verified, other's publish) 
+### 4. debezium-1.9.3 fixed the bug oracle server logminer session occupies memory and does not release(this issue is not verified, other's publish) 
 
 # TODO
-### 1. Upgrade the debezium dependency from 1.6.4.Final to 1.9.5.Final+ in Flink CDC 2.3
-**this would address the 2、4 issues above**
+### 1. Upgrade the debezium dependency from 1.6.4.Final to 1.9.5.Final in Flink CDC 2.3
+> this would address the 2、4 issues above
 
 ### 2. Use object stream, Serialize uncommited transactions into file
 > * such as per 1000 records switch a file to avoid memory leakage
