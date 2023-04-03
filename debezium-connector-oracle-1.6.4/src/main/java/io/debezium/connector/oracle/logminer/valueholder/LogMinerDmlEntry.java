@@ -5,7 +5,9 @@
  */
 package io.debezium.connector.oracle.logminer.valueholder;
 
-public interface LogMinerDmlEntry {
+import java.io.Serializable;
+
+public interface LogMinerDmlEntry extends Serializable {
     /**
      * @return object array that contains the before state, values from WHERE clause.
      */

@@ -5,20 +5,17 @@
  */
 package io.debezium.connector.oracle.logminer;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Supplier;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.Stream;
 
+import io.debezium.connector.oracle.logminer.rocksdb.RocksDbCache;
 import org.apache.kafka.connect.errors.DataException;
+import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +64,10 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Constructor to create a new instance.
      *
-     * @param connectorConfig connector configuration, should not be {@code null}
-     * @param schema database schema
-     * @param clock system clock
-     * @param errorHandler the connector error handler
+     * @param connectorConfig  connector configuration, should not be {@code null}
+     * @param schema           database schema
+     * @param clock            system clock
+     * @param errorHandler     the connector error handler
      * @param streamingMetrics the streaming metrics
      */
     TransactionalBuffer(OracleConnectorConfig connectorConfig, OracleDatabaseSchema schema, Clock clock, ErrorHandler errorHandler,
@@ -120,14 +117,14 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Register a DML operation with the transaction buffer.
      *
-     * @param operation operation type
+     * @param operation     operation type
      * @param transactionId unique transaction identifier
-     * @param scn system change number
-     * @param tableId table identifier
+     * @param scn           system change number
+     * @param tableId       table identifier
      * @param entrySupplier parser entry provider
-     * @param changeTime time the DML operation occurred
-     * @param rowId unique row identifier
-     * @param rsId rollback sequence identifier
+     * @param changeTime    time the DML operation occurred
+     * @param rowId         unique row identifier
+     * @param rsId          rollback sequence identifier
      */
     void registerDmlOperation(int operation, String transactionId, Scn scn, TableId tableId, Supplier<LogMinerDmlEntry> entrySupplier,
                               Instant changeTime, String rowId, Object rsId) {
@@ -139,17 +136,17 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Register a {@code SEL_LOB_LOCATOR} operation with the transaction buffer.
      *
-     * @param operation operation type
-     * @param transactionId unique transaction identifier
-     * @param scn system change number
-     * @param tableId table identifier
-     * @param changeTime time the operation occurred
-     * @param rowId unique row identifier
-     * @param rsId rollback sequence identifier
-     * @param segOwner table owner
-     * @param tableName table name
-     * @param redoSql the redo sql statement
-     * @param table the relational table
+     * @param operation       operation type
+     * @param transactionId   unique transaction identifier
+     * @param scn             system change number
+     * @param tableId         table identifier
+     * @param changeTime      time the operation occurred
+     * @param rowId           unique row identifier
+     * @param rsId            rollback sequence identifier
+     * @param segOwner        table owner
+     * @param tableName       table name
+     * @param redoSql         the redo sql statement
+     * @param table           the relational table
      * @param selectLobParser the select LOB parser
      */
     void registerSelectLobOperation(int operation, String transactionId, Scn scn, TableId tableId, Instant changeTime,
@@ -168,14 +165,14 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Register a {@code LOB_WRITE} operation with the transaction buffer.
      *
-     * @param operation operation type
+     * @param operation     operation type
      * @param transactionId unique transaction identifier
-     * @param scn system change number
-     * @param tableId table identifier
-     * @param data data written by the LOB operation
-     * @param changeTime time the operation occurred
-     * @param rowId unique row identifier
-     * @param rsId rollback sequence identifier
+     * @param scn           system change number
+     * @param tableId       table identifier
+     * @param data          data written by the LOB operation
+     * @param changeTime    time the operation occurred
+     * @param rowId         unique row identifier
+     * @param rsId          rollback sequence identifier
      */
     void registerLobWriteOperation(int operation, String transactionId, Scn scn, TableId tableId, String data,
                                    Instant changeTime, String rowId, Object rsId) {
@@ -188,13 +185,13 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Register a {@code LOB_ERASE} operation with the transction buffer.
      *
-     * @param operation operation type
+     * @param operation     operation type
      * @param transactionId unique transaction identifier
-     * @param scn system change number
-     * @param tableId table identifier
-     * @param changeTime time the operation occurred
-     * @param rowId unique row identifier
-     * @param rsId rollback sequence identifier
+     * @param scn           system change number
+     * @param tableId       table identifier
+     * @param changeTime    time the operation occurred
+     * @param rowId         unique row identifier
+     * @param rsId          rollback sequence identifier
      */
     void registerLobEraseOperation(int operation, String transactionId, Scn scn, TableId tableId, Instant changeTime,
                                    String rowId, Object rsId) {
@@ -205,8 +202,8 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Undo a staged DML operation in the transaction buffer.
      *
      * @param transactionId unique transaction identifier
-     * @param undoRowId unique row identifier to be undone
-     * @param tableId table identifier
+     * @param undoRowId     unique row identifier to be undone
+     * @param tableId       table identifier
      */
     void undoDmlOperation(String transactionId, String undoRowId, TableId tableId) {
         Transaction transaction = transactions.get(transactionId);
@@ -228,15 +225,14 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Register a new transaction with the transaction buffer.
      *
      * @param transactionId unique transaction identifier
-     * @param scn starting SCN of the transaction
+     * @param scn           starting SCN of the transaction
      */
     void registerTransaction(String transactionId, Scn scn) {
         Transaction transaction = transactions.get(transactionId);
         if (transaction == null && !isRecentlyCommitted(transactionId)) {
             transactions.put(transactionId, new Transaction(transactionId, scn));
             streamingMetrics.setActiveTransactions(transactions.size());
-        }
-        else if (transaction != null && !isRecentlyCommitted(transactionId)) {
+        } else if (transaction != null && !isRecentlyCommitted(transactionId)) {
             LOGGER.trace("Transaction {} is not yet committed and START event detected, reset eventIds.", transactionId);
             // Since the transaction hasn't been committed and the START transaction was re-mined,
             // reset the event id counter for the transaction so that any events pulled from the
@@ -323,8 +319,7 @@ public final class TransactionalBuffer implements AutoCloseable {
             lastCommittedScn = Scn.valueOf(scn.longValue());
             if (!transaction.events.isEmpty()) {
                 dispatcher.dispatchTransactionCommittedEvent(offsetContext);
-            }
-            else {
+            } else {
                 dispatcher.dispatchHeartbeatEvent(offsetContext);
             }
 
@@ -339,15 +334,12 @@ public final class TransactionalBuffer implements AutoCloseable {
                 // cache recent transaction and commit scn for handling offset updates
                 recentlyCommittedTransactionIds.add(new RecentlyCommittedTransaction(transaction, scn));
             }
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             LogMinerHelper.logError(streamingMetrics, "Commit interrupted", e);
             Thread.currentThread().interrupt();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             errorHandler.setProducerThrowable(e);
-        }
-        finally {
+        } finally {
             streamingMetrics.incrementCommittedTransactions();
             streamingMetrics.setActiveTransactions(transactions.size());
             streamingMetrics.incrementCommittedDmlCount(transaction.events.size());
@@ -363,7 +355,7 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Update the offset context based on the current state of the transaction buffer.
      *
      * @param offsetContext offset context, should not be {@code null}
-     * @param dispatcher event dispatcher, should not be {@code null}
+     * @param dispatcher    event dispatcher, should not be {@code null}
      * @return offset context SCN, never {@code null}
      * @throws InterruptedException thrown if dispatch of heartbeat event fails
      */
@@ -373,12 +365,10 @@ public final class TransactionalBuffer implements AutoCloseable {
                 LOGGER.trace("Transaction buffer is empty, updating offset SCN to '{}'", maxCommittedScn);
                 offsetContext.setScn(maxCommittedScn);
                 dispatcher.dispatchHeartbeatEvent(offsetContext);
-            }
-            else {
+            } else {
                 LOGGER.trace("No max committed SCN detected, offset SCN still '{}'", offsetContext.getScn());
             }
-        }
-        else {
+        } else {
             Scn minStartScn = getMinimumScn();
             if (!minStartScn.isNull()) {
                 LOGGER.trace("Removing all commits up to SCN '{}'", minStartScn);
@@ -387,8 +377,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 recentlyEmittedDdls.removeIf(scn -> scn.compareTo(minStartScn) < 0);
                 offsetContext.setScn(minStartScn.subtract(Scn.valueOf(1)));
                 dispatcher.dispatchHeartbeatEvent(offsetContext);
-            }
-            else {
+            } else {
                 LOGGER.trace("Minimum SCN in transaction buffer is still SCN '{}'", minStartScn);
             }
         }
@@ -433,7 +422,7 @@ public final class TransactionalBuffer implements AutoCloseable {
      * <p>
      * In case of an abandonment, all DMLs/Commits/Rollbacks for this transaction will be ignored
      *
-     * @param thresholdScn the smallest SVN of any transaction to keep in the buffer. All others will be removed.
+     * @param thresholdScn  the smallest SVN of any transaction to keep in the buffer. All others will be removed.
      * @param offsetContext the offset context
      */
     void abandonLongTransactions(Scn thresholdScn, OracleOffsetContext offsetContext) {
@@ -469,10 +458,10 @@ public final class TransactionalBuffer implements AutoCloseable {
     private Scn calculateSmallestScn() {
         Scn scn = transactions.isEmpty() ? null
                 : transactions.values()
-                        .stream()
-                        .map(transaction -> transaction.firstScn)
-                        .min(Scn::compareTo)
-                        .orElseThrow(() -> new DataException("Cannot calculate smallest SCN"));
+                .stream()
+                .map(transaction -> transaction.firstScn)
+                .min(Scn::compareTo)
+                .orElseThrow(() -> new DataException("Cannot calculate smallest SCN"));
         streamingMetrics.setOldestScn(scn == null ? Scn.valueOf(-1) : scn);
         return scn;
     }
@@ -503,9 +492,9 @@ public final class TransactionalBuffer implements AutoCloseable {
      * If the event is registered, the underlying metrics active transactions and lag will be re-calculated.
      *
      * @param transactionId transaction id that contained the given event
-     * @param scn system change number for the event
-     * @param changeTime the time the event occurred
-     * @param supplier supplier function to generate the event if validity checks pass
+     * @param scn           system change number for the event
+     * @param changeTime    the time the event occurred
+     * @param supplier      supplier function to generate the event if validity checks pass
      * @return true if the event was registered, false otherwise
      */
     private boolean registerEvent(String transactionId, Scn scn, Instant changeTime, Supplier<LogMinerEvent> supplier) {
@@ -529,8 +518,7 @@ public final class TransactionalBuffer implements AutoCloseable {
         if (transaction.events.size() > eventId) {
             // only return true if new event is added, otherwise false
             return false;
-        }
-        else {
+        } else {
             // Adding new event at eventId offset
             LOGGER.trace("Transaction {}, adding event reference at index {}", transactionId, eventId);
 
@@ -605,7 +593,7 @@ public final class TransactionalBuffer implements AutoCloseable {
         LogMinerEvent prevEvent = null;
 
         int prevEventSize = transaction.events.size();
-        for (int i = 0; i < transaction.events.size();) {
+        for (int i = 0; i < transaction.events.size(); ) {
 
             final LogMinerEvent event = transaction.events.get(i);
             LOGGER.trace("Processing event {}", event);
@@ -631,8 +619,7 @@ public final class TransactionalBuffer implements AutoCloseable {
 
         if (transaction.events.size() != prevEventSize) {
             LOGGER.trace("Reconciled transaction {} from {} events to {}.", transaction.transactionId, prevEventSize, transaction.events.size());
-        }
-        else {
+        } else {
             LOGGER.trace("Transaction {} event queue was unmodified.", transaction.transactionId);
         }
     }
@@ -641,9 +628,9 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Attempts to merge the provided SEL_LOB_LOCATOR event with the previous event in the transaction.
      *
      * @param transaction transaction being processed, never {@code null}
-     * @param index event index being processed
-     * @param event event being processed, never {@code null}
-     * @param prevEvent previous event in the transaction, can be {@code null}
+     * @param index       event index being processed
+     * @param event       event being processed, never {@code null}
+     * @param prevEvent   previous event in the transaction, can be {@code null}
      * @return true if the event is merged, false if the event was not merged.
      */
     private boolean shouldMergeSelectLobLocatorEvent(Transaction transaction, int index, SelectLobLocatorEvent event, LogMinerEvent prevEvent) {
@@ -658,8 +645,7 @@ public final class TransactionalBuffer implements AutoCloseable {
             if (event.isBinaryData()) {
                 // For BLOB we pass the list of string chunks as-is to the value converter
                 lobData = new BlobChunkList(lobWrites);
-            }
-            else {
+            } else {
                 // For CLOB we go ahead and pre-process the List into a single string.
                 lobData = String.join("", lobWrites);
             }
@@ -676,8 +662,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 transaction.events.remove(index);
                 return true;
             }
-        }
-        else if (lobEraseEvents == 0 && lobWrites.isEmpty()) {
+        } else if (lobEraseEvents == 0 && lobWrites.isEmpty()) {
             // There were no LOB operations present, discard entire SEL_LOB_LOCATOR
             // To simulate this, we treat this as a "merge" op so caller doesn't modify previous event
             transaction.events.remove(index);
@@ -712,8 +697,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 transaction.events.remove(index);
                 return true;
             }
-        }
-        else if (RowMapper.UPDATE == prevEvent.getOperation()) {
+        } else if (RowMapper.UPDATE == prevEvent.getOperation()) {
             // Previous event is an UPDATE operation.
             // Only merge the SEL_LOB_LOCATOR event if the previous UPDATE is for the same table/row
             if (isForSameTableOrScn(event, prevEvent) && isSameTableRow(event, prevEvent)) {
@@ -724,8 +708,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 transaction.events.remove(index);
                 return true;
             }
-        }
-        else if (RowMapper.SELECT_LOB_LOCATOR == prevEvent.getOperation()) {
+        } else if (RowMapper.SELECT_LOB_LOCATOR == prevEvent.getOperation()) {
             // Previous event is a SEL_LOB_LOCATOR operation.
             // Only merge the two SEL_LOB_LOCATOR events if they're for the same table/row
             if (isForSameTableOrScn(event, prevEvent) && isSameTableRow(event, prevEvent)) {
@@ -736,8 +719,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 transaction.events.remove(index);
                 return true;
             }
-        }
-        else {
+        } else {
             throw new DebeziumException("Unexpected previous event operation: " + prevEvent.getOperation());
         }
 
@@ -751,9 +733,9 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Attempts to merge the provided DML event with the previous event in the transaction.
      *
      * @param transaction transaction being processed, never {@code null}
-     * @param index event index being processed
-     * @param event event being processed, never {@code null}
-     * @param prevEvent previous event in the transaction, can be {@code null}
+     * @param index       event index being processed
+     * @param event       event being processed, never {@code null}
+     * @param prevEvent   previous event in the transaction, can be {@code null}
      * @return true if the event is merged, false if the event was not merged
      */
     private boolean shouldMergeDmlEvent(Transaction transaction, int index, DmlEvent event, LogMinerEvent prevEvent) {
@@ -778,8 +760,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                     return true;
                 }
             }
-        }
-        else if (RowMapper.UPDATE == prevEvent.getOperation()) {
+        } else if (RowMapper.UPDATE == prevEvent.getOperation()) {
             // Previous event is an UPDATE operation.
             // This will happen if there are non-CLOB and inline-CLOB fields updated in the same SQL.
             // The inline-CLOB values should be merged with the previous UPDATE event.
@@ -793,8 +774,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                     return true;
                 }
             }
-        }
-        else if (RowMapper.SELECT_LOB_LOCATOR == prevEvent.getOperation()) {
+        } else if (RowMapper.SELECT_LOB_LOCATOR == prevEvent.getOperation()) {
             // Previous event is a SEL_LOB_LOCATOR operation.
             // SQL contained both non-inline CLOB and inline-CLOB field changes.
             if (RowMapper.UPDATE == event.getOperation()) {
@@ -825,7 +805,7 @@ public final class TransactionalBuffer implements AutoCloseable {
      * for a SEL_LOB_LOCATOR event which is for binary data (BLOB) data types.
      *
      * @param transaction transaction being processed, never {@code null}
-     * @param index index to the first LOB_WRITE operation
+     * @param index       index to the first LOB_WRITE operation
      * @return list of string-based values for each LOB_WRITE operation
      */
     private List<String> readAndCombineLobWriteEvents(Transaction transaction, int index, boolean binaryData) {
@@ -859,7 +839,7 @@ public final class TransactionalBuffer implements AutoCloseable {
      * Read and remove all LobErase events detected in the transaction event queue.
      *
      * @param transaction transaction being processed, never {@code null}
-     * @param index index to the first LOB_ERASE operation
+     * @param index       index to the first LOB_ERASE operation
      * @return number of LOB_ERASE events consumed and removed from the event queue
      */
     private int readAndConsumeLobEraseEvents(Transaction transaction, int index) {
@@ -885,7 +865,7 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Checks whether the two events are for the same table or participate in the same system change.
      *
-     * @param event current event being processed, never {@code null}
+     * @param event     current event being processed, never {@code null}
      * @param prevEvent previous/parent event that has been processed, may be {@code null}
      * @return true if the two events are for the same table or system change number, false otherwise
      */
@@ -902,7 +882,7 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Checks whether the two events are for the same table row.
      *
-     * @param event current event being processed, never {@code null}
+     * @param event     current event being processed, never {@code null}
      * @param prevEvent previous/parent event that has been processed, never {@code null}
      * @return true if the two events are for the same table row, false otherwise
      */
@@ -932,7 +912,7 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Merge column values from {@code event} with {@code prevEvent}.
      *
-     * @param event current event being processed, never {@code null}
+     * @param event     current event being processed, never {@code null}
      * @param prevEvent previous/parent parent that has been processed, never {@code null}
      */
     private void mergeNewColumns(LogMinerEvent event, LogMinerEvent prevEvent) {
@@ -944,12 +924,10 @@ public final class TransactionalBuffer implements AutoCloseable {
             if (prevEventIsInsert && "EMPTY_CLOB()".equals(prevValue)) {
                 LOGGER.trace("\tAssigning column index {} with updated CLOB value.", i);
                 prevEvent.getEntry().getNewValues()[i] = value;
-            }
-            else if (prevEventIsInsert && "EMPTY_BLOB()".equals(prevValue)) {
+            } else if (prevEventIsInsert && "EMPTY_BLOB()".equals(prevValue)) {
                 LOGGER.trace("\tAssigning column index {} with updated BLOB value.", i);
                 prevEvent.getEntry().getNewValues()[i] = value;
-            }
-            else if (!prevEventIsInsert && value != null) {
+            } else if (!prevEventIsInsert && value != null) {
                 LOGGER.trace("\tUpdating column index {} in previous event", i);
                 prevEvent.getEntry().getNewValues()[i] = value;
             }
@@ -958,7 +936,7 @@ public final class TransactionalBuffer implements AutoCloseable {
 
     /**
      * Represents a transaction boundary that was recently committed.
-     *
+     * <p>
      * This is used by the buffer to detect transactions read from overlapping mining sessions that can
      * safely be ignored as the connector has already reconciled and emitted the event for it.
      */
@@ -1015,7 +993,45 @@ public final class TransactionalBuffer implements AutoCloseable {
         private Transaction(String transactionId, Scn firstScn) {
             this.transactionId = transactionId;
             this.firstScn = firstScn;
-            this.events = new ArrayList<>();
+            this.events = new ArrayList<LogMinerEvent>() {
+                @Override
+                public int size() {
+                    return RocksDbCache.getCounter().get(transactionId) == null ? 0 : RocksDbCache.getCounter().get(transactionId);
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return RocksDbCache.get(transactionId + size()) == null;
+                }
+
+                @Override
+                public LogMinerEvent get(int index) {
+                    return (LogMinerEvent) (RocksDbCache.get(transactionId + index));
+                }
+
+                @Override
+                public boolean add(LogMinerEvent logMinerEvent) {
+                    try {
+                        RocksDbCache.put(transactionId + size(), logMinerEvent);
+                        return true;
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    return false;
+                }
+
+                @Override
+                public LogMinerEvent remove(int index) {
+                    LogMinerEvent logMinerEvent = get(index);
+                    RocksDbCache.delete(transactionId + index);
+                    return logMinerEvent;
+                }
+
+                @Override
+                public boolean removeIf(Predicate<? super LogMinerEvent> filter) {
+                    return super.removeIf(filter);
+                }
+            };
             this.lastScn = firstScn;
             this.eventIds = 0;
         }
@@ -1034,7 +1050,7 @@ public final class TransactionalBuffer implements AutoCloseable {
     /**
      * Base class for all possible LogMiner events
      */
-    private static class LogMinerEvent {
+    private static class LogMinerEvent implements Serializable {
         private final int operation;
         private final LogMinerDmlEntry entry;
         private final Scn scn;

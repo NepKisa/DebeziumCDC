@@ -21,8 +21,8 @@ public class OracleConsumer {
 
     public static void main(String[] args) throws Exception {
         final Properties props = new Properties();
-        props.setProperty("name", "oracle130-0403-m1");
-        props.setProperty("database.server.name", "oracle130-0403-m1");
+        props.setProperty("name", "oracle130-0403-m2");
+        props.setProperty("database.server.name", "oracle130-0403-m2");
         props.setProperty("connector.class", OracleConnector.class.getName());
         props.setProperty("offset.storage", FileOffsetBackingStore.class.getName());
         //指定 offset 存储目录
