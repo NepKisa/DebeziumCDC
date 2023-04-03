@@ -12,15 +12,18 @@
 
     <name>cdc-oracle</name>
     <url>http://maven.apache.org</url>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+<!--        <debezium.version>1.9.5.Final</debezium.version>-->
+<!--        <debezium.dependency>debezium-connector-oracle-1.9.5</debezium.dependency>-->
+        <debezium.version>1.6.4.Final</debezium.version>
+        <debezium.dependency>debezium-connector-oracle-1.6.4</debezium.dependency>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.nepkisa</groupId>
-            <artifactId>debezium-connector-oracle</artifactId>
+            <artifactId>${debezium.dependency}</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -43,16 +46,26 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>2.17.1</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.fusesource.jansi</groupId>-->
-<!--            <artifactId>jansi</artifactId>-->
-<!--            <version>1.18</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.slf4j</groupId>-->
-<!--            <artifactId>slf4j-api</artifactId>-->
-<!--           <version>1.7.21</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.fusesource.jansi</groupId>-->
+        <!--            <artifactId>jansi</artifactId>-->
+        <!--            <version>1.18</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.slf4j</groupId>-->
+        <!--            <artifactId>slf4j-api</artifactId>-->
+        <!--           <version>1.7.21</version>-->
+        <!--        </dependency>-->
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-api</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-embedded</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
