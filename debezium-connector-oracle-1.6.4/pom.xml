@@ -13,23 +13,25 @@
     <packaging>jar</packaging>
     <properties>
         <debezium.version>1.6.4.Final</debezium.version>
+        <debezium-core.dependency>debezium-core-1.6.4</debezium-core.dependency>
+        <debezium-ddl-parser.dependency>debezium-ddl-parser-1.6.4</debezium-ddl-parser.dependency>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.nepkisa</groupId>
+            <artifactId>${debezium-core.dependency}</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.rocksdb</groupId>
             <artifactId>rocksdbjni</artifactId>
             <version>7.1.2</version>
         </dependency>
         <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-core</artifactId>
-            <version>${debezium.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-ddl-parser</artifactId>
-            <version>${debezium.version}</version>
+            <groupId>org.nepkisa</groupId>
+            <artifactId>${debezium-ddl-parser.dependency}</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
@@ -81,30 +83,30 @@
         <!--            <version>${debezium.version}</version>-->
         <!--            <scope>test</scope>-->
         <!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>junit</groupId>-->
-<!--            <artifactId>junit</artifactId>-->
-<!--            <version>4.13.1</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.easytesting</groupId>-->
-<!--            <artifactId>fest-assert</artifactId>-->
-<!--            <version>1.4</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.awaitility</groupId>-->
-<!--            <artifactId>awaitility</artifactId>-->
-<!--            <version>4.0.1</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.mockito</groupId>-->
-<!--            <artifactId>mockito-core</artifactId>-->
-<!--            <version>3.0.0</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>junit</groupId>-->
+        <!--            <artifactId>junit</artifactId>-->
+        <!--            <version>4.13.1</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.easytesting</groupId>-->
+        <!--            <artifactId>fest-assert</artifactId>-->
+        <!--            <version>1.4</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.awaitility</groupId>-->
+        <!--            <artifactId>awaitility</artifactId>-->
+        <!--            <version>4.0.1</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.mockito</groupId>-->
+        <!--            <artifactId>mockito-core</artifactId>-->
+        <!--            <version>3.0.0</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
 
         <!-- Required by VerifyRecord -->
 

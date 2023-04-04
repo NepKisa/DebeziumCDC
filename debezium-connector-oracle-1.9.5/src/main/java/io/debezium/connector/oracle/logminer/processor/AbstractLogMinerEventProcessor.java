@@ -290,7 +290,6 @@ public abstract class AbstractLogMinerEventProcessor<T extends AbstractTransacti
             case INSERT:
             case UPDATE:
             case DELETE:
-                LOGGER.error("--------DML----------");
                 handleDataEvent(row);
                 break;
             case UNSUPPORTED:
@@ -318,7 +317,6 @@ public abstract class AbstractLogMinerEventProcessor<T extends AbstractTransacti
         final AbstractTransaction transaction = getTransactionCache().get(transactionId);
         if (transaction == null && !isRecentlyProcessed(transactionId)) {
             getTransactionCache().put(transactionId, createTransaction(row));
-            LOGGER.error("创建缓存");
             metrics.setActiveTransactions(getTransactionCache().size());
         }
         else if (transaction != null && !isRecentlyProcessed(transactionId)) {
@@ -341,7 +339,6 @@ public abstract class AbstractLogMinerEventProcessor<T extends AbstractTransacti
         }
 
         final T transaction = getAndRemoveTransactionFromCache(transactionId);
-        LOGGER.error("移除缓存");
         if (transaction == null) {
             LOGGER.trace("Transaction {} not found, commit skipped.", transactionId);
             return;

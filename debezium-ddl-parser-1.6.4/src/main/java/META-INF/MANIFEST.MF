@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.4.0
+Build-Jdk-Spec: 11
+Specification-Title: Debezium ANTLR DDL parsers
+Specification-Version: 1.6
+Specification-Vendor: JBoss by Red Hat
+Implementation-Title: Debezium ANTLR DDL parsers
+Implementation-Version: 1.6.4.Final
+Implementation-Vendor: JBoss by Red Hat
+Implementation-URL: https://debezium.io/debezium-parent/debezium-ddl-par
+ ser
+Java-Vendor: Oracle Corporation
+Java-Version: 11.0.12
+Os-Arch: amd64
+Os-Name: Linux
+Os-Version: 4.18.0-348.2.1.el8_5.x86_64
+Scm-Connection: scm:git:git@github.com:debezium/debezium.git/debezium-pa
+ rent/debezium-ddl-parser
+Scm-Revision: d2cf0872276d97b3ba689af923ebc3ca531a78c5
+Scm-Url: https://github.com/debezium/debezium/debezium-parent/debezium-d
+ dl-parser
+

@@ -34,6 +34,11 @@ public class RocksDbCache {
         }
     }
 
+    //TODO where close rocksdb connect?
+    public static void close() {
+        db.close();
+    }
+
     public static Map<String, Integer> getCounter() {
         return counter;
     }
@@ -68,7 +73,7 @@ public class RocksDbCache {
 
     //Deserialized classes need implements Serializable recursively
     private static Object byteToObject(byte[] bytes) {
-        java.lang.Object obj = null;
+        Object obj = null;
         if (bytes == null | bytes.length == 0) return obj;
         try {
             //bytearray to object

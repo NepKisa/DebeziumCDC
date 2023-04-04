@@ -89,6 +89,7 @@ class LogMinerQueryResultProcessor {
 
     /**
      * This method does all the job
+     *
      * @param resultSet the info from LogMiner view
      * @throws SQLException thrown if any database exception occurs
      */
@@ -182,8 +183,7 @@ class LogMinerQueryResultProcessor {
                                             changeTime.toInstant(),
                                             streamingMetrics));
                         }
-                    }
-                    catch (InterruptedException e) {
+                    } catch (InterruptedException e) {
                         throw new DebeziumException("Failed to dispatch DDL event", e);
                     }
                 }
@@ -263,16 +263,14 @@ class LogMinerQueryResultProcessor {
                             transactionalBuffer.undoDmlOperation(txId, rowId, tableId);
                             continue;
                         }
-
                         transactionalBuffer.registerDmlOperation(operationCode, txId, scn, tableId, () -> {
-                            final LogMinerDmlEntry dmlEntry = parse(redoSql, table, txId);
-                            dmlEntry.setObjectOwner(segOwner);
-                            dmlEntry.setObjectName(tableName);
-                            return dmlEntry;
-                        },
+                                    final LogMinerDmlEntry dmlEntry = parse(redoSql, table, txId);
+                                    dmlEntry.setObjectOwner(segOwner);
+                                    dmlEntry.setObjectName(tableName);
+                                    return dmlEntry;
+                                },
                                 changeTime.toInstant(), rowId, rsId);
-                    }
-                    else {
+                    } else {
                         LOGGER.trace("Redo SQL was empty, DML operation skipped.");
                     }
 
@@ -294,7 +292,7 @@ class LogMinerQueryResultProcessor {
         }
 
         LOGGER.debug("{} Rows, {} DMLs, {} Commits, {} Rollbacks, {} Inserts, {} Updates, {} Deletes. Processed in {} millis. " +
-                "Lag:{}. Offset scn:{}. Offset commit scn:{}. Active transactions:{}. Sleep time:{}",
+                        "Lag:{}. Offset scn:{}. Offset commit scn:{}. Active transactions:{}. Sleep time:{}",
                 rows, dmlCounter, commitCounter, rollbackCounter, insertCounter, updateCounter, deleteCounter, totalTime.toMillis(),
                 streamingMetrics.getLagFromSourceInMilliseconds(), offsetContext.getScn(), offsetContext.getCommitScn(),
                 streamingMetrics.getNumberOfActiveTransactions(), streamingMetrics.getMillisecondToSleepBetweenMiningQuery());
@@ -321,8 +319,7 @@ class LogMinerQueryResultProcessor {
         if (table == null) {
             if (connectorConfig.getTableFilters().dataCollectionFilter().isIncluded(tableId)) {
                 table = dispatchSchemaChangeEventAndGetTableForNewCapturedTable(tableId);
-            }
-            else {
+            } else {
                 LogMinerHelper.logWarn(streamingMetrics, "DML for table '{}' that is not known to this connector, skipping.", tableId);
             }
         }
@@ -347,8 +344,7 @@ class LogMinerQueryResultProcessor {
                             streamingMetrics));
 
             return schema.tableFor(tableId);
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             throw new DebeziumException("Failed to dispatch schema change event", e);
         }
     }
@@ -383,8 +379,7 @@ class LogMinerQueryResultProcessor {
                             currentOffsetScn, commitScn);
                     streamingMetrics.incrementScnFreezeCount();
                 }
-            }
-            else {
+            } else {
                 stuckScnCounter = 0;
             }
         }
@@ -396,8 +391,7 @@ class LogMinerQueryResultProcessor {
             Instant parseStart = Instant.now();
             dmlEntry = dmlParser.parse(redoSql, table, txId);
             streamingMetrics.addCurrentParseTime(Duration.between(parseStart, Instant.now()));
-        }
-        catch (DmlParserException e) {
+        } catch (DmlParserException e) {
             StringBuilder message = new StringBuilder();
             message.append("DML statement couldn't be parsed.");
             message.append(" Please open a Jira issue with the statement '").append(redoSql).append("'.");

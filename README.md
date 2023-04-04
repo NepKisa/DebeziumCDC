@@ -64,12 +64,9 @@ The depenedency in pom.xml like this
 ### 1. Upgrade the debezium dependency from 1.6.4.Final to 1.9.5.Final in Flink CDC 2.3
 > this would address the 2、4 issues above
 
-### 2. Use object stream, Serialize uncommited transactions into file
-> * such as per 1000 records switch a file to avoid memory leakage
->
-> * start dedicated write and read threads respectively, adopt produser/consumer mode,
->
-> * construct a buffer queue to manage uncommited transactions
+### 2. Use object stream, Serialize uncommited transactions into RocksDB
+> use rocksDB save events replace memory
 
 ### 3. Write directly to kafka without formatting
 > override method emitChangeRecords() in class LogMinerChangeRecordEmitter
+

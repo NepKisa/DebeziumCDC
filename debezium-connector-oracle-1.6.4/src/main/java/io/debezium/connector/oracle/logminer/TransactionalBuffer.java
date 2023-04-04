@@ -5,29 +5,11 @@
  */
 package io.debezium.connector.oracle.logminer;
 
-import java.io.Serializable;
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.function.*;
-import java.util.stream.Stream;
-
-import io.debezium.connector.oracle.logminer.rocksdb.RocksDbCache;
-import org.apache.kafka.connect.errors.DataException;
-import org.rocksdb.RocksDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.debezium.DebeziumException;
 import io.debezium.annotation.NotThreadSafe;
-import io.debezium.connector.oracle.BlobChunkList;
-import io.debezium.connector.oracle.OracleConnectorConfig;
-import io.debezium.connector.oracle.OracleDatabaseSchema;
-import io.debezium.connector.oracle.OracleOffsetContext;
-import io.debezium.connector.oracle.OracleStreamingChangeEventSourceMetrics;
-import io.debezium.connector.oracle.Scn;
+import io.debezium.connector.oracle.*;
 import io.debezium.connector.oracle.logminer.parser.SelectLobParser;
+import io.debezium.connector.oracle.logminer.rocksdb.RocksDbCache;
 import io.debezium.connector.oracle.logminer.valueholder.LogMinerDmlEntry;
 import io.debezium.pipeline.ErrorHandler;
 import io.debezium.pipeline.EventDispatcher;
@@ -35,6 +17,17 @@ import io.debezium.pipeline.source.spi.ChangeEventSource;
 import io.debezium.relational.Table;
 import io.debezium.relational.TableId;
 import io.debezium.util.Clock;
+import org.apache.kafka.connect.errors.DataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Buffer that stores transactions and related callbacks that will be executed when a transaction commits or discarded
@@ -228,6 +221,7 @@ public final class TransactionalBuffer implements AutoCloseable {
      * @param scn           starting SCN of the transaction
      */
     void registerTransaction(String transactionId, Scn scn) {
+
         Transaction transaction = transactions.get(transactionId);
         if (transaction == null && !isRecentlyCommitted(transactionId)) {
             transactions.put(transactionId, new Transaction(transactionId, scn));
@@ -258,7 +252,6 @@ public final class TransactionalBuffer implements AutoCloseable {
                    ChangeEventSource.ChangeEventSourceContext context, String debugMessage, EventDispatcher<TableId> dispatcher) {
 
         Instant start = Instant.now();
-        //TODO 从数据库查询transaction
         Transaction transaction = transactions.remove(transactionId);
         if (transaction == null) {
             return false;
@@ -286,7 +279,12 @@ public final class TransactionalBuffer implements AutoCloseable {
         LOGGER.trace("COMMIT, {}, smallest SCN: {}", debugMessage, smallestScn);
         try {
             int counter = transaction.events.size();
-            for (LogMinerEvent event : transaction.events) {
+
+
+
+//            for (LogMinerEvent event : transaction.events) {
+            for (int i = 0; i < transaction.events.size(); i++) {
+                LogMinerEvent event = transaction.events.get(i);
                 if (!context.isRunning()) {
                     return false;
                 }
@@ -522,8 +520,8 @@ public final class TransactionalBuffer implements AutoCloseable {
             // Adding new event at eventId offset
             LOGGER.trace("Transaction {}, adding event reference at index {}", transactionId, eventId);
 
-            //TODO 添加到数据库
             transaction.events.add(supplier.get());
+
             streamingMetrics.calculateLagMetrics(changeTime);
             return true;
         }
@@ -1001,7 +999,7 @@ public final class TransactionalBuffer implements AutoCloseable {
 
                 @Override
                 public boolean isEmpty() {
-                    return RocksDbCache.get(transactionId + size()) == null;
+                    return !(size() > 0);
                 }
 
                 @Override
@@ -1013,6 +1011,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 public boolean add(LogMinerEvent logMinerEvent) {
                     try {
                         RocksDbCache.put(transactionId + size(), logMinerEvent);
+                        RocksDbCache.getCounter().put(transactionId, size() + 1);
                         return true;
                     } catch (Exception exception) {
                         exception.printStackTrace();
@@ -1031,6 +1030,7 @@ public final class TransactionalBuffer implements AutoCloseable {
                 public boolean removeIf(Predicate<? super LogMinerEvent> filter) {
                     return super.removeIf(filter);
                 }
+
             };
             this.lastScn = firstScn;
             this.eventIds = 0;

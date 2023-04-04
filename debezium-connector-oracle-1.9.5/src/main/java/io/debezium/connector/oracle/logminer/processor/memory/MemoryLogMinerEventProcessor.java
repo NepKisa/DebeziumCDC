@@ -231,13 +231,10 @@ public class MemoryLogMinerEventProcessor extends AbstractLogMinerEventProcessor
             }
 
             int eventId = transaction.getNextEventId();
-            LOGGER.error("enventId: " +eventId);
-            LOGGER.error("添加元素前 ----> transaction.getEvents().size(): "+transaction.getEvents().size());
             if ( transaction.getEvents().size()<= eventId) {
                 // Add new event at eventId offset
                 LOGGER.trace("Transaction {}, adding event reference at index {}", transactionId, eventId);
                 transaction.getEvents().add(eventSupplier.get());
-                LOGGER.error("添加元素后 ----> transaction.getEvents().size(): "+transaction.getEvents().size());
                 metrics.calculateLagMetrics(row.getChangeTime());
             }
 

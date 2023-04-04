@@ -1,0 +1,21 @@
+JarIndex-Version: 1.0
+
+debezium-ddl-parser-1.6.4.Final-sources.jar
+META-INF
+META-INF/maven
+META-INF/maven/io.debezium
+META-INF/maven/io.debezium/debezium-ddl-parser
+io
+io/debezium
+io/debezium/antlr
+io/debezium/ddl
+io/debezium/ddl/parser
+io/debezium/ddl/parser/mysql
+io/debezium/ddl/parser/mysql/generated
+io/debezium/ddl/parser/oracle
+io/debezium/ddl/parser/oracle/generated
+MySqlLexer.tokens
+MySqlParser.tokens
+PlSqlLexer.tokens
+PlSqlParser.tokens
+
